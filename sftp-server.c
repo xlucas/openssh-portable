@@ -382,14 +382,6 @@ handle_to_fd(int handle)
 	return -1;
 }
 
-static int
-handle_to_flags(int handle)
-{
-	if (handle_is_ok(handle, HANDLE_FILE))
-		return handles[handle].flags;
-	return 0;
-}
-
 static void
 handle_update_read(int handle, ssize_t bytes)
 {
@@ -793,26 +785,20 @@ process_write(u_int32_t id)
 
 	if (fd < 0)
 		status = SSH2_FX_FAILURE;
-	else {
-		if (!(handle_to_flags(handle) & O_APPEND) &&
-				lseek(fd, off, SEEK_SET) < 0) {
-			status = errno_to_portable(errno);
-			error("process_write: seek failed");
-		} else {
-/* XXX ATOMICIO ? */
-			ret = write(fd, data, len);
-			if (ret < 0) {
-				error("process_write: write failed");
-				status = errno_to_portable(errno);
-			} else if ((size_t)ret == len) {
-				status = SSH2_FX_OK;
-				handle_update_write(handle, ret);
-			} else {
-				debug2("nothing at all written");
-				status = SSH2_FX_FAILURE;
-			}
-		}
-	}
+    else {
+        /* XXX ATOMICIO ? */
+        ret = write(fd, data, len);
+        if (ret < 0) {
+            error("process_write: write failed");
+            status = errno_to_portable(errno);
+        } else if ((size_t)ret == len) {
+            status = SSH2_FX_OK;
+            handle_update_write(handle, ret);
+        } else {
+            debug2("nothing at all written");
+            status = SSH2_FX_FAILURE;
+        }
+    }
 	send_status(id, status);
 	free(data);
 }
